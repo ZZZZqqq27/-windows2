@@ -13,8 +13,8 @@ MAC_BASE_PORT="9601"
 WSL_BASE_PORT="9701"
 
 # 测试参数
-FILE_SIZE_MB=0.1
-FILE_COUNT=48
+FILE_SIZE_MB=1
+FILE_COUNT=36
 DATASET_DIR="${ROOT_DIR}/data/dual_host/dataset_${FILE_SIZE_MB}MB_${FILE_COUNT}files"
 OUT_DIR="${ROOT_DIR}/output/dual_host"
 mkdir -p "${OUT_DIR}" "${DATASET_DIR}"
@@ -54,9 +54,15 @@ if [[ ! -f "${cfg_file}" ]]; then
   exit 1
 fi
 
+start_ms=$(get_time_ms)
 for f in "${DATASET_DIR}"/*.bin; do
   "${PRO_DIR}/build/app" --config "${cfg_file}" --input "${f}" > /dev/null 2>&1 || true
 done
+end_ms=$(get_time_ms)
+elapsed_ms=$((end_ms - start_ms))
+throughput=$(awk -v fc="${FILE_COUNT}" -v fsmb="${FILE_SIZE_MB}" -v ms="${elapsed_ms}" 'BEGIN{printf "%.3f", (fc*fsmb*1000)/ms}')
+
+echo "✅ 上传完成，耗时 ${elapsed_ms}ms，吞吐量 ${throughput}MB/s"
 
 # 3. 收集 chunk_id
 echo ""

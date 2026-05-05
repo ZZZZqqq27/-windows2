@@ -4,8 +4,11 @@
 
 ### Mac 侧
 ```bash
-# 查看是否有 build/app 进程
-ps aux | grep build/app | grep -v grep
+# 查看是否有 build/app 进程（不用竖杠）
+pgrep -fl build/app
+
+# 或者（更详细）
+ps aux | grep build/app
 
 # 查看端口是否被监听（以 9601 为例）
 lsof -i :9601
@@ -14,17 +17,24 @@ lsof -i :9601
 ### WSL 侧
 ```bash
 # 在 WSL 终端执行
-ps aux | grep build/app | grep -v grep
+# 查看是否有 build/app 进程（不用竖杠）
+pgrep -fl build/app
+
+# 或者（更详细）
+ps aux | grep build/app
 
 # 查看端口是否被监听（以 9701 为例）
 ss -tlnp | grep 9701
+
+# 或者（不用竖杠）
+lsof -i :9701 2>/dev/null || echo "端口未监听"
 ```
 
 ## 二、手动停止节点
 
 ### Mac 侧
 ```bash
-# 停止所有 build/app 进程
+# 停止所有 build/app 进程（推荐）
 pkill -9 -f "build/app"
 
 # 或者用更精确的方式
@@ -34,6 +44,7 @@ killall -9 app
 ### WSL 侧
 ```bash
 # 在 WSL 终端执行
+# 停止所有 build/app 进程（推荐）
 pkill -9 -f "build/app"
 
 # 或者用更精确的方式
@@ -80,4 +91,20 @@ rm -rf /path/to/data/dual_host
 rm -rf /path/to/pro/chunks_A* /path/to/pro/chunks_B*
 rm -f /path/to/pro/chunk_index_A*.tsv /path/to/pro/chunk_index_B*.tsv
 rm -rf /path/to/pro/logs
+```
+
+## 五、简单检查命令（不用竖杠）
+
+```bash
+# 检查所有相关进程
+pgrep -fl build/app
+
+# 检查特定端口
+lsof -i :9601
+lsof -i :9602
+lsof -i :9701
+lsof -i :9702
+
+# 停止所有节点
+pkill -9 -f "build/app"
 ```
