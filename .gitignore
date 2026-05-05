@@ -7,3 +7,7 @@ pro/logs/
 .DS_Store
 .vscode/
 .idea/
+pro/cmake-build-debug/
+pro/scripts/
+pro/cmake-build-debug/
+pro/scripts/
