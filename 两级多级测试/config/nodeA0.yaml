@@ -1,9 +1,0 @@
-node_id: "A1"
-listen_port: 9601
-seed_nodes: "192.168.1.11:9601,192.168.1.11:9602,192.168.1.101:9701,192.168.1.101:9702"
-self_addr: "192.168.1.11:9601"
-chunks_dir: "/Users/zhangzhiqing/workspace/-windows2/pro/chunks_A0"
-chunk_index_file: "/Users/zhangzhiqing/workspace/-windows2/pro/chunk_index_A0.tsv"
-aes_key_hex: "00112233445566778899aabbccddeeff"
-hmac_key_hex: "0102030405060708090a0b0c0d0e0f10"
-log_file: "logs/dual_host_A0.log"

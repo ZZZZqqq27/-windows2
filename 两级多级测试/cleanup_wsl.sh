@@ -23,7 +23,8 @@ rm -rf '${PRO_DIR}/chunks_A'* 2>/dev/null || true; \
 rm -rf '${PRO_DIR}/chunks_B'* 2>/dev/null || true; \
 rm -f '${PRO_DIR}/chunk_index_A'*.tsv 2>/dev/null || true; \
 rm -f '${PRO_DIR}/chunk_index_B'*.tsv 2>/dev/null || true; \
-rm -rf '${PRO_DIR}/logs' 2>/dev/null || true" 2>/dev/null || {
+rm -rf '${PRO_DIR}/logs' 2>/dev/null || true; \
+rm -f '${SCRIPT_DIR}/config/'*.yaml 2>/dev/null || true" 2>/dev/null || {
   echo "[WARNING] 无法连接到 WSL 机器，请手动在 WSL 侧执行清理"
 }
 
