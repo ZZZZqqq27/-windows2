@@ -23,7 +23,7 @@ TOTAL_NODES=$((NODE_A_COUNT + NODE_B_COUNT))
 # 输出目录
 OUT_DIR="${ROOT_DIR}/output/dual_host"
 RAW_DIR="${OUT_DIR}/raw_wsl"
-SUMMARY_DIR="${OUT_DIR}/summary"
+SUMMARY_DIR="${SCRIPT_DIR}/results"
 mkdir -p "${RAW_DIR}" "${SUMMARY_DIR}"
 
 # 文件输出

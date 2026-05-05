@@ -21,7 +21,6 @@ rm -rf "${PRO_DIR}/chunks_A"* 2>/dev/null || true
 rm -rf "${PRO_DIR}/chunks_B"* 2>/dev/null || true
 rm -f "${PRO_DIR}/chunk_index_A"*.tsv
 rm -f "${PRO_DIR}/chunk_index_B"*.tsv
-rm -f "${SCRIPT_DIR}/chunk_ids_"*.txt
 rm -rf "${PRO_DIR}/logs"
 
 echo "✅ Mac 侧测试数据已清理"

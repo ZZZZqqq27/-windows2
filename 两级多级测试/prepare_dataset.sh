@@ -81,7 +81,7 @@ done
 echo "✅ chunk_id 已保存到: ${CHUNK_IDS_FILE}"
 
 # 4. 生成环境变量文件（数组改为字符串格式，便于跨平台source）
-ENV_FILE="${OUT_DIR}/env_${RUN_TAG}.sh"
+ENV_FILE="${SCRIPT_DIR}/env_${RUN_TAG}.sh"
 cat > "${ENV_FILE}" << EOF
 #!/usr/bin/env bash
 
