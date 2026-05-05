@@ -1,0 +1,115 @@
+项目名称（论文题目）：分布式智能视频内容分发 Agent 系统设计与实现
+技术栈：C++17/20（全栈 C++），CMake 构建，必要第三方库后续按需引入
+
+一、项目定位与边界（MVP）
+1. 目标
+   - 低成本：通过 P2P 协同传输减少中心带宽消耗
+   - 高效率：预测热门内容并提前预分发
+   - 安全性：基础加密隧道保护分片传输
+2. MVP 边界
+   - 仅支持视频文件，按分片传输
+   - 节点规模 <= 50
+   - 热度模型采用 ARIMA（简化时序预测）
+   - 加密仅做基础隧道，不做复杂密钥协商与 NAT 穿透
+
+二、总体架构（分层 + 控制/数据分离）
+1. 控制平面（Control Plane）
+   - 节点发现与 DHT 路由
+   - 节点状态上报与评分
+   - 预分发调度与策略下发
+2. 数据平面（Data Plane）
+   - 分片传输（P2P）
+   - 分片校验与重传
+   - 加密隧道数据封装
+
+三、核心模块设计
+1. 分片与存储
+   - 分片策略：按 1MB 固定大小拆分，最后一片可变
+   - 命名：SHA-256(content) 作为分片 ID
+   - 冗余：每片至少 3 副本
+   - 索引：本地元数据存储（分片 ID -> 文件路径/副本数/最后访问）
+2. P2P 网络
+   - DHT：Kademlia 路由（节点规模小，参数简化）
+   - 传输：抽象 Transport 接口，后续可接 QUIC（如 msquic/ngtcp2）
+   - 协议：轻量消息协议（注册/发现/请求/响应/心跳）
+3. 加密隧道
+   - 基于会话密钥的对称加密（AES-128-CBC）
+   - 数据平面透明封装
+4. 智能调度
+   - 热度预测：ARIMA( p, d, q ) 基于过去 7 天请求量预测 24 小时
+   - 节点评分：score = w1*带宽 + w2*低延迟 + w3*低负载
+   - 预分发：对高热度视频分片推送到低负载节点
+
+四、关键算法与实现要点
+1. Kademlia DHT
+   - NodeID：SHA-256(公钥/随机种子)
+   - 路由表：k-buckets（k=8/16）
+   - 查找：迭代式查找，限制 hop 以控制规模
+2. ARIMA 时序预测
+   - 数据预处理：去趋势、差分
+   - 参数拟合：MVP 中采用固定参数或简单网格搜索
+   - 输出：未来 24 小时热度序列
+3. 分片校验
+   - 每片传输完成后校验哈希
+   - 失败则重传或切换节点
+
+五、数据与存储设计
+1. 元数据表（内存 + 落盘）
+   - chunk_id
+   - file_id
+   - local_path
+   - replica_count
+   - last_access_ts
+2. 日志
+   - 传输日志 / 调度日志 / 安全日志
+
+六、接口与协议设计
+1. 协议消息类型
+   - NODE_HELLO / NODE_WELCOME
+   - STORE_CHUNK / STORE_ACK
+   - FIND_CHUNK / FIND_RESP
+   - GET_CHUNK / CHUNK_DATA
+   - HEARTBEAT
+2. 传输层
+   - 抽象 Transport，可替换 TCP/QUIC
+   - 应用层消息自定义序列化（后续可用 JSON/Protobuf）
+
+七、安全设计
+1. 传输加密
+   - AES-128-CBC + HMAC 校验
+2. 权限控制（MVP 轻量）
+   - 预共享密钥（PSK）
+   - 基于 NodeID 的白名单
+
+八、目录与文件规划（本项目所有实现均为 C++）
+说明：以下文件均为占位文件，仅写明职责，不做具体实现。
+
+pro/
+  CMakeLists.txt                      - 项目构建入口（CMake，C++17/20）
+  项目架构设计.txt                     - 本架构设计说明文档
+  configs/
+    app.yaml                          - 运行配置（端口/节点数/日志级别）
+  docs/
+    README.txt                        - 文档目录说明与写作提示
+  include/
+    p2p_node.h                        - P2P 节点接口与生命周期
+    chunk_store.h                     - 分片存储与索引接口
+    scheduler.h                       - 热度预测与预分发策略接口
+    crypto_tunnel.h                   - 加密隧道接口
+    protocol.h                        - 消息结构与序列化接口
+  src/
+    main.cpp                          - 程序入口，启动节点服务
+    p2p_node.cpp                      - P2P 节点实现（发现/下载/上传）
+    chunk_store.cpp                   - 分片存储实现
+    scheduler.cpp                     - ARIMA 预测与节点评分实现
+    crypto_tunnel.cpp                 - 加密隧道实现
+    protocol.cpp                      - 协议与消息编解码实现
+  tests/
+    test_placeholder.cpp              - 测试占位文件
+  scripts/
+    build.sh                          - 一键构建脚本（后续补充）
+
+九、与论文写作要求的对应
+1. 题目规范：采用“XXX系统设计与实现”
+2. 系统实现章节：至少包含关键算法（DHT/ARIMA/分片校验）
+3. 系统设计章节：包含总体架构 + 模块设计 + 数据设计 + 接口设计

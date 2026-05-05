@@ -1,0 +1,125 @@
+=======================================================
+              两级多级测试 - 命令执行清单
+=======================================================
+
+说明：每次测试都要按顺序执行以下命令，共3轮（N4/N8/N16），每轮3个并发度（C4/C8/C16）
+
+-------------------------------------------------------
+第1轮：N4组（2+2节点）
+-------------------------------------------------------
+【Mac侧】步骤1：启动Mac节点
+cd /path/to/两级多级测试
+./start_machineA.sh 2
+
+【WSL侧】步骤2：启动WSL节点
+cd /path/to/两级多级测试
+./start_machineB.sh 2
+
+【Mac侧】步骤3：准备数据集（会生成 chunk_ids_*.txt 和 env_*.sh）
+./prepare_dataset.sh
+
+【Mac侧】步骤4：复制文件到WSL（手动操作）
+复制 output/dual_host/env_*.sh 到 WSL 的两级多级测试目录
+复制 chunk_ids_*.txt 到 WSL 的两级多级测试目录
+
+【Mac侧】步骤5：Mac侧下载（会自动跑 C4/C8/C16）
+./download_mac.sh output/dual_host/env_*.sh 2 2
+
+【WSL侧】步骤6：WSL侧下载（会自动跑 C4/C8/C16）
+./download_wsl.sh output/dual_host/env_*.sh 2 2
+
+【WSL侧】步骤7：复制结果到Mac（手动操作）
+复制 output/dual_host/summary/runs_wsl_*.tsv 到 Mac
+复制 output/dual_host/summary/group_summary_wsl_*.tsv 到 Mac
+
+【两台】步骤8：清理进程
+pkill -9 -f build/app
+
+-------------------------------------------------------
+第2轮：N8组（4+4节点）
+-------------------------------------------------------
+【Mac侧】步骤1：启动Mac节点
+cd /path/to/两级多级测试
+./start_machineA.sh 4
+
+【WSL侧】步骤2：启动WSL节点
+cd /path/to/两级多级测试
+./start_machineB.sh 4
+
+【Mac侧】步骤3：准备数据集
+./prepare_dataset.sh
+
+【Mac侧】步骤4：复制新文件到WSL
+
+【Mac侧】步骤5：Mac侧下载
+./download_mac.sh output/dual_host/env_*.sh 4 4
+
+【WSL侧】步骤6：WSL侧下载
+./download_wsl.sh output/dual_host/env_*.sh 4 4
+
+【WSL侧】步骤7：复制结果到Mac
+
+【两台】步骤8：清理进程
+pkill -9 -f build/app
+
+-------------------------------------------------------
+第3轮：N16组（8+8节点）
+-------------------------------------------------------
+【Mac侧】步骤1：启动Mac节点
+cd /path/to/两级多级测试
+./start_machineA.sh 8
+
+【WSL侧】步骤2：启动WSL节点
+cd /path/to/两级多级测试
+./start_machineB.sh 8
+
+【Mac侧】步骤3：准备数据集
+./prepare_dataset.sh
+
+【Mac侧】步骤4：复制新文件到WSL
+
+【Mac侧】步骤5：Mac侧下载
+./download_mac.sh output/dual_host/env_*.sh 8 8
+
+【WSL侧】步骤6：WSL侧下载
+./download_wsl.sh output/dual_host/env_*.sh 8 8
+
+【WSL侧】步骤7：复制结果到Mac
+
+【两台】步骤8：清理进程
+pkill -9 -f build/app
+
+-------------------------------------------------------
+9组测试对应关系
+-------------------------------------------------------
+N4_C4 → 第1轮自动执行
+N4_C8 → 第1轮自动执行
+N4_C16 → 第1轮自动执行
+
+N8_C4 → 第2轮自动执行
+N8_C8 → 第2轮自动执行
+N8_C16 → 第2轮自动执行
+
+N16_C4 → 第3轮自动执行
+N16_C8 → 第3轮自动执行
+N16_C16 → 第3轮自动执行
+
+-------------------------------------------------------
+输出文件汇总
+-------------------------------------------------------
+所有结果最终都汇总到 Mac 侧：
+output/dual_host/summary/runs_mac_*.tsv        - Mac侧逐轮明细
+output/dual_host/summary/group_summary_mac_*.tsv   - Mac侧分组汇总
+output/dual_host/summary/runs_wsl_*.tsv        - WSL侧逐轮明细（复制过来）
+output/dual_host/summary/group_summary_wsl_*.tsv   - WSL侧分组汇总（复制过来）
+
+-------------------------------------------------------
+前置准备
+-------------------------------------------------------
+1. 修改所有脚本开头的 IP 地址：
+   MAC_IP="你的Mac局域网IP"
+   WSL_IP="你的WSL局域网IP"
+
+2. 确保 pro/build/app 已编译成功
+
+3. 复制整个「两级多级测试」文件夹到 WSL

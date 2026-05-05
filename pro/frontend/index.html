@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>P2P 节点前端 MVP</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="hero">
+      <div>
+        <h1>P2P 节点前端 MVP</h1>
+        <p class="hint">单节点前端联调：上传 / 下载 / 状态 / 统计。</p>
+      </div>
+      <div class="badge">MVP · 单节点</div>
+    </header>
+
+    <section class="card">
+      <h2>节点列表</h2>
+      <div class="grid">
+        <label>新增节点 URL
+          <input id="nodeInput" type="text" placeholder="http://127.0.0.1:8080" />
+        </label>
+        <div class="actions">
+          <button id="btnAddNode" class="primary">添加节点</button>
+        </div>
+      </div>
+      <div id="nodeList" class="node-list"></div>
+      <div class="actions">
+        <button id="btnRefreshAll">刷新全部状态</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>API 配置（当前节点）</h2>
+      <div class="grid">
+        <label>当前 API Base URL
+          <input id="apiBase" type="text" value="http://127.0.0.1:8081" />
+        </label>
+        <div class="actions">
+          <button id="btnStatus" class="primary">获取状态</button>
+        </div>
+      </div>
+      <pre id="statusBox" class="output"></pre>
+    </section>
+
+    <section class="card">
+      <h2>上传</h2>
+      <div class="grid">
+        <label>文件路径（节点机器上的路径）
+          <input id="uploadFile" type="text" placeholder="data/input.txt" />
+        </label>
+        <label>副本数
+          <input id="uploadReplica" type="number" value="0" min="0" />
+        </label>
+        <label>manifest 输出路径（可选）
+          <input id="uploadManifest" type="text" placeholder="data/manifest.txt" />
+        </label>
+        <div class="actions">
+          <button id="btnUpload" class="primary">上传</button>
+        </div>
+      </div>
+      <pre id="uploadBox" class="output"></pre>
+    </section>
+
+    <section class="card">
+      <h2>下载</h2>
+      <div class="grid">
+        <label>manifest 路径
+          <input id="downloadManifest" type="text" placeholder="data/manifest.txt" />
+        </label>
+        <label>输出文件路径
+          <input id="downloadOut" type="text" placeholder="data/output.bin" />
+        </label>
+        <label>peer（host:port）
+          <input id="downloadPeer" type="text" placeholder="127.0.0.1:9001" />
+        </label>
+        <label>策略
+          <select id="downloadStrategy">
+            <option value="random">random</option>
+            <option value="round_robin">round_robin</option>
+          </select>
+        </label>
+        <label>secure
+          <select id="downloadSecure">
+            <option value="0">0</option>
+            <option value="1">1</option>
+          </select>
+        </label>
+        <div class="actions">
+          <button id="btnDownload" class="primary">下载</button>
+        </div>
+      </div>
+      <pre id="downloadBox" class="output"></pre>
+    </section>
+
+    <section class="card">
+      <h2>统计</h2>
+      <div class="grid">
+        <label>类型
+          <select id="statsType">
+            <option value="download">download</option>
+            <option value="upload_meta">upload_meta</option>
+            <option value="upload_replica">upload_replica</option>
+          </select>
+        </label>
+        <label>过滤节点（可选）
+          <input id="statsOwner" type="text" placeholder="127.0.0.1:9001" />
+        </label>
+        <label>条数
+          <input id="statsLimit" type="number" value="50" min="1" />
+        </label>
+        <div class="actions">
+          <button id="btnStats" class="primary">查询</button>
+        </div>
+      </div>
+      <pre id="statsBox" class="output"></pre>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

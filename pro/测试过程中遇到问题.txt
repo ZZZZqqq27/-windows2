@@ -1,0 +1,13 @@
+测试过程中遇到问题记录
+
+1) MVP4：三节点功能测试（测试1）
+问题：使用 ps 获取 RSS 时提示 “ps not permitted”，内存阈值检查失败。
+解决：资源检查改为“可选”，当 ps 不可用时跳过；脚本继续执行功能验证。
+
+2) MVP4：三节点大文件测试（测试2）
+问题：客户端提前连接，服务端尚未完成分片校验并监听端口，出现 “Connection refused”。
+解决：在脚本中增加“等待服务端 ready”的日志轮询（检测到 “tcp server waiting for client” 再发起客户端请求）。
+
+3) MVP5：三节点持续上传/下载验证（console 模式）
+问题：服务端收到 PUT_CHUNK_HEX2 后，内存索引未更新，随后 GET_CHUNK 返回 “CHUNK_NOT_FOUND”。
+解决：在服务端 PUT 处理完成后重新加载索引（LoadChunkIndex），保证下载可读到新落盘的分片。

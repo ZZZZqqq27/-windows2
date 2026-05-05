@@ -1,0 +1,53 @@
+前端接口使用方法（多节点）
+
+一、启动后端 HTTP API（多个节点）
+1) 终端 A：
+./build/app --config configs/app.yaml --mode http --http_port 18087
+
+2) 终端 B：
+./build/app --config configs/app.yaml --mode http --http_port 18089
+
+说明：端口可自定义，前端以 http://127.0.0.1:端口 访问。
+
+二、启动前端
+cd frontend
+python3 -m http.server 18090
+
+浏览器访问：
+http://127.0.0.1:18090/
+
+三、前端填写与操作
+1) 节点列表
+- 新增节点 URL：
+  - http://127.0.0.1:18087
+  - http://127.0.0.1:18089
+- 点击“添加节点”，再点“刷新全部状态”查看可用性
+- 选择一个节点点击“使用”，切换为当前节点
+
+2) API 配置（当前节点）
+- 当前 API Base URL：显示/填写当前使用的节点地址
+- 点击“获取状态”，确认 node_id/self_addr 正常显示
+
+3) 上传
+- 文件路径（节点机器上的路径）：例如 data/input.txt
+- 副本数：例如 0 或 1
+- manifest 输出路径（可选）：例如 data/manifest.txt
+- 点击“上传”，查看返回结果
+
+4) 下载
+- manifest 路径：例如 data/manifest.txt
+- 输出文件路径：例如 data/output.bin
+- peer（host:port）：例如 127.0.0.1:9001
+- 策略：random 或 round_robin
+- secure：0 或 1
+- 点击“下载”，查看返回结果
+
+5) 统计
+- 类型：download / upload_meta / upload_replica
+- 过滤节点（可选）：例如 127.0.0.1:9001
+- 条数：例如 50
+- 点击“查询”，查看统计输出
+
+四、注意
+- 前端的“文件路径/manifest/输出路径”都是后端节点机器上的路径。
+- 若“状态：不可达”，检查该节点的 http 端口是否已启动。

@@ -1,0 +1,4 @@
+/Users/zhangzhiqing/武大的/毕业设计/zzqGraduationProj/毕业设计正式项目/pro/cmake-build-debug/CMakeFiles/app.dir
+/Users/zhangzhiqing/武大的/毕业设计/zzqGraduationProj/毕业设计正式项目/pro/cmake-build-debug/CMakeFiles/mvp2_tests.dir
+/Users/zhangzhiqing/武大的/毕业设计/zzqGraduationProj/毕业设计正式项目/pro/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/zhangzhiqing/武大的/毕业设计/zzqGraduationProj/毕业设计正式项目/pro/cmake-build-debug/CMakeFiles/rebuild_cache.dir

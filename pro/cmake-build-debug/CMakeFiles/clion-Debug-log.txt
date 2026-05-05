@@ -1,0 +1,11 @@
+/Applications/CLion.app/Contents/bin/cmake/mac/aarch64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/Applications/CLion.app/Contents/bin/ninja/mac/aarch64/ninja -G Ninja -S /Users/zhangzhiqing/武大的/毕业设计/zzqGraduationProj/毕业设计正式项目/pro -B /Users/zhangzhiqing/武大的/毕业设计/zzqGraduationProj/毕业设计正式项目/pro/cmake-build-debug
+-- The CXX compiler identification is AppleClang 15.0.0.15000309
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /Library/Developer/CommandLineTools/usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found OpenSSL: /opt/homebrew/Cellar/openssl@3/3.6.0/lib/libcrypto.dylib (found version "3.6.0")
+-- Configuring done (3.0s)
+-- Generating done (0.1s)
+-- Build files have been written to: /Users/zhangzhiqing/武大的/毕业设计/zzqGraduationProj/毕业设计正式项目/pro/cmake-build-debug

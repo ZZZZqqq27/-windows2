@@ -1,0 +1,64 @@
+测试记录
+
+1) MVP4 测试1：三节点功能测试（普通 + 加密）
+功能覆盖：分片/索引（MVP1/2）+ FIND_CHUNK/GET_CHUNK（MVP3）+ 加密传输 GET_CHUNK_SEC（MVP4）
+节点数：3（node-a/node-b/node-c）
+输入文件：约 34 字节（脚本内置小文件）
+分片参数：chunk_size_mb=1
+关键参数：aes_key_hex / hmac_key_hex（统一配置）
+验证点：
+- 普通模式日志包含 “mvp3: download ok”
+- 加密模式日志包含 “mvp4: secure download ok”
+结果：通过
+
+2) MVP4 测试2：三节点大文件测试（普通 + 加密）
+功能覆盖：分片/索引（MVP1/2）+ FIND_CHUNK/GET_CHUNK（MVP3）+ 加密传输 GET_CHUNK_SEC（MVP4）
+节点数：3（node-a/node-b/node-c）
+输入文件：约 120MB（data/mvp4_3n_big/input_120mb.bin）
+分片参数：chunk_size_mb=1（共 120 个分片）
+关键参数：aes_key_hex / hmac_key_hex（统一配置）
+验证点：
+- 普通模式日志包含 “mvp3: download ok”
+- 加密模式日志包含 “mvp4: secure download ok”
+结果：通过
+
+3) MVP5 测试：上传入口 + 多副本分发
+功能覆盖：上传入口（--upload）+ 本地分片 + 多副本复制（--replica）
+节点数：3（node-a/node-b/node-c）
+输入文件：约 35 字节（data/mvp5_replica/input.txt）
+分片参数：chunk_size_mb=1（单分片）
+关键参数：--replica 2（复制到 seed_nodes 的两个节点）
+验证点：
+- node-b/node-c 的 chunk_index.tsv 包含同一 chunk_id
+结果：通过
+
+4) MVP5 测试：owner 列表更新
+功能覆盖：owner 字段写入与索引更新（上传本地分片 + 副本分发）
+节点数：3（node-a/node-b/node-c）
+输入文件：约 35 字节（data/mvp5_replica/input.txt）
+分片参数：chunk_size_mb=1（单分片）
+关键参数：--replica 2
+验证点：
+- node-a 的 chunk_index.tsv owner 字段包含 self_addr 与副本节点
+结果：通过
+
+5) MVP5 测试：source 字段写入
+功能覆盖：source=upload / source=replica 的写入与读取
+节点数：3（node-a/node-b/node-c）
+输入文件：约 35 字节（data/mvp5_replica/input.txt）
+分片参数：chunk_size_mb=1（单分片）
+关键参数：--replica 2
+验证点：
+- node-a 的 chunk_index.tsv source=upload
+- node-b 的 chunk_index.tsv source=replica
+结果：通过
+
+6) MVP5 测试：FIND_CHUNK 返回多 owner
+功能覆盖：服务端从索引 owners 返回多 owner
+节点数：3（node-a/node-b/node-c）
+输入文件：约 35 字节（data/mvp5_replica/input.txt）
+分片参数：chunk_size_mb=1（单分片）
+关键参数：--replica 2
+验证点：
+- node-b 日志中 FIND_RESP 同时包含 node-a 与 node-b
+结果：通过

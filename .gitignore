@@ -1,0 +1,9 @@
+pro/build/
+pro/data/
+pro/logs/
+*.o
+*.d
+*.log
+.DS_Store
+.vscode/
+.idea/

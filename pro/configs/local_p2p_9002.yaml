@@ -1,0 +1,18 @@
+# 本机联调：纯 P2P TCP 节点（9002）
+node_id: "local-9002"
+listen_port: 9002
+seed_nodes: "127.0.0.1:9001"
+self_addr: "127.0.0.1:9002"
+routing_capacity: 8
+chunk_size_mb: 1
+chunks_dir: "data/local_dev/node_9002/chunks"
+chunk_index_file: "data/local_dev/node_9002/chunk_index.tsv"
+aes_key_hex: "00112233445566778899aabbccddeeff"
+hmac_key_hex: "0102030405060708090a0b0c0d0e0f10"
+download_strategy: "random"
+download_stats_file: "data/local_dev/node_9002/download_stats.tsv"
+upload_meta_file: "data/local_dev/node_9002/upload_meta.tsv"
+upload_replica_file: "data/local_dev/node_9002/upload_replica.tsv"
+http_port: 8080
+log_level: "info"
+log_file: "logs/local_p2p_9002.log"

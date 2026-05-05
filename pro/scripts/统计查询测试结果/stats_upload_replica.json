@@ -1,0 +1,1 @@
+{"type":"upload_replica","total_rows":2,"items":[{"time":"2026-03-10 02:00:00","chunk_id":"abcd1234","target":"127.0.0.1:9001","success":1},{"time":"2026-03-10 02:00:00","chunk_id":"abcd1234","target":"127.0.0.1:9002","success":0}]}

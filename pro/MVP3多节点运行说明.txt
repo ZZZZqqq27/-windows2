@@ -1,0 +1,42 @@
+MVP3 多节点可运行状态说明
+
+当前阶段：MVP3 已完成（静态种子节点、简化路由表、FIND_CHUNK 查询与下载）
+运行状态：三节点可完成“发现 → 下载 → 校验”闭环
+
+一、可运行功能
+1) 静态种子节点加载与打印
+2) 简化路由表维护（去重、容量限制、距离排序）
+3) FIND_CHUNK 查询返回候选节点列表
+4) GET_CHUNK 下载分片并校验
+
+二、三节点自动化脚本（推荐）
+脚本路径：scripts/run_mvp3_find_chunk_demo.sh
+脚本功能：
+- 生成输入文件
+- 节点 B/C 生成分片与索引
+- 启动 B/C 服务端
+- 节点 A 查询并下载分片
+
+执行命令：
+bash scripts/run_mvp3_find_chunk_demo.sh
+
+三、手动运行方式（可选）
+1) 准备三份配置（示例路径）：
+- data/mvp3/configs/node_a.yaml
+- data/mvp3/configs/node_b.yaml
+- data/mvp3/configs/node_c.yaml
+
+2) 在 B/C 上生成分片：
+./build/app --config data/mvp3/configs/node_b.yaml --input data/mvp3/input.txt
+./build/app --config data/mvp3/configs/node_c.yaml --input data/mvp3/input.txt
+
+3) 启动 B/C 服务端：
+./build/app --config data/mvp3/configs/node_b.yaml --mode server
+./build/app --config data/mvp3/configs/node_c.yaml --mode server
+
+4) 节点 A 查询并下载：
+./build/app --config data/mvp3/configs/node_a.yaml --mode client --peer 127.0.0.1:9002 --chunk_id <chunk_id>
+
+四、验证日志（关键字段）
+- FIND_RESP 返回多个候选节点
+- mvp3: download ok from <host:port>

@@ -1,0 +1,69 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"jsonFile" : "directory-.-Debug-f5ebdc15457944623624.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "p2p_video_agent",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "app::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-app-Debug-668e46d6400cf057bc4d.json",
+					"name" : "app",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "mvp2_tests::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-mvp2_tests-Debug-78585746291e72619c55.json",
+					"name" : "mvp2_tests",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/Users/zhangzhiqing/\u6b66\u5927\u7684/\u6bd5\u4e1a\u8bbe\u8ba1/zzqGraduationProj/\u6bd5\u4e1a\u8bbe\u8ba1\u6b63\u5f0f\u9879\u76ee/pro/cmake-build-debug",
+		"source" : "/Users/zhangzhiqing/\u6b66\u5927\u7684/\u6bd5\u4e1a\u8bbe\u8ba1/zzqGraduationProj/\u6bd5\u4e1a\u8bbe\u8ba1\u6b63\u5f0f\u9879\u76ee/pro"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 7
+	}
+}

@@ -1,0 +1,24 @@
+# 目的：运行配置（MVP0 使用）
+node_id: "node-001"
+listen_port: 9000
+dht_k: 8
+max_nodes: 50
+seed_nodes: "127.0.0.1:9001,127.0.0.1:9002"
+self_addr: "127.0.0.1:9000"
+routing_capacity: 8
+chunk_size_mb: 1
+chunks_dir: "data/chunks"
+chunk_index_file: "data/chunk_index.tsv"
+# AES-128 / HMAC 配置（十六进制字符串，16 字节 = 32 hex）
+aes_key_hex: "00112233445566778899aabbccddeeff"
+hmac_key_hex: "0102030405060708090a0b0c0d0e0f10"
+download_strategy: "random"
+download_stats_file: "data/download_stats.tsv"
+upload_meta_file: "data/upload_meta.tsv"
+upload_replica_file: "data/upload_replica.tsv"
+http_port: 8080
+log_level: "info"
+log_file: "logs/app.log"
+download_stats_file: "/Users/zhangzhiqing/武大的/毕业设计/zzqGraduationProj/毕业设计正式项目/pro/data/test_stats_query/download_stats.tsv"
+upload_meta_file: "/Users/zhangzhiqing/武大的/毕业设计/zzqGraduationProj/毕业设计正式项目/pro/data/test_stats_query/upload_meta.tsv"
+upload_replica_file: "/Users/zhangzhiqing/武大的/毕业设计/zzqGraduationProj/毕业设计正式项目/pro/data/test_stats_query/upload_replica.tsv"

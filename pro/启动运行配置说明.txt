@@ -1,0 +1,711 @@
+启动运行配置说明（当前版本：MVP6+，含 DHT/多副本/安全传输/统计/HTTP）
+
+更新时间：以代码仓库当前实现为准（本文档用于论文写作与复现实验）。
+
+一、如何启动
+1) 构建
+cmake -S . -B build
+cmake --build build
+
+2) 运行
+./build/app --config configs/app.yaml
+
+推荐：优先用脚本复现完整链路（见“六、推荐脚本与复现实验”）。
+
+二、启动参数说明
+--config <path>
+说明：指定配置文件路径
+示例：--config configs/app.yaml
+
+--mode <server|client|console>
+说明：运行模式
+server：仅 TCP 服务端监听（处理协议请求）
+client：仅客户端操作（下载/查询/manifest 下载；上传发生在无 mode 或任意 mode 前置阶段）
+console：服务端常驻 + 交互式上传/manifest 下载（持续可用）
+stats：读取持久化统计（download/upload_meta/upload_replica）
+http：HTTP API（最小可用后端接口，用于与前端联动）
+示例：--mode console
+
+--input <path>
+说明：指定输入文件，触发分片与校验（MVP1/MVP2）
+示例：--input data/sample.txt
+
+--upload <path>
+说明：上传入口（等价于 --input），触发本地分片与校验（MVP5-1）
+示例：--upload data/sample.txt
+
+--replica <n>
+说明：上传后把分片复制到 n 个节点（使用 seed_nodes 列表；会通过 TCP PUT_* 将 chunk 分发到 peer）
+示例：--replica 2
+
+--strategy <name>
+说明：下载策略（random/round_robin），可覆盖配置
+示例：--strategy round_robin
+
+--manifest_out <path>
+说明：上传时输出分片清单（顺序列表）
+示例：--manifest_out data/manifest.txt
+
+--manifest <path>
+说明：下载完整文件时的分片清单
+示例：--manifest data/manifest.txt
+
+--out_file <path>
+说明：下载完整文件时的输出文件路径
+示例：--out_file data/output.bin
+
+--chunks_dir <path>
+说明：覆盖分片输出目录
+示例：--chunks_dir data/chunks
+
+--chunk_index_file <path>
+说明：覆盖分片索引文件路径
+示例：--chunk_index_file data/chunk_index.tsv
+
+--add_node <host:port>
+说明：运行时向路由表加入节点
+示例：--add_node 127.0.0.1:9003
+
+--remove_node <host:port>
+说明：运行时从路由表删除节点
+示例：--remove_node 127.0.0.1:9002
+
+--secure
+说明：启用加密传输模式（GET_CHUNK_SEC）
+示例：--secure
+
+--stats_type <download|upload_meta|upload_replica>
+说明：统计类型（用于 --mode stats）
+示例：--stats_type download
+
+--owner <host:port>
+说明：按节点过滤（download/replica 统计）
+示例：--owner 127.0.0.1:9001
+
+--limit <n>
+说明：最多输出 n 条记录（默认 50）
+示例：--limit 100
+
+--json
+说明：以 JSON 格式输出统计结果
+示例：--json
+
+--http_port <port>
+说明：HTTP API 端口（配合 --mode http）
+示例：--http_port 8080
+
+前端 MVP（单节点）
+1) 启动后端：
+./build/app --config configs/app.yaml --mode http
+2) 启动前端：
+cd frontend
+python3 -m http.server 8000
+3) 浏览器访问：
+http://127.0.0.1:8000/
+
+前端 MVP（多节点联动）
+说明：在前端“节点列表”中添加多个 API 地址，点击“使用”切换当前节点。
+
+console 模式命令
+upload <file_path> [replica=0] [manifest_out=path]
+说明：持续上传并可选多副本分发
+示例：upload data/input.txt 2 data/manifest.txt
+
+download_manifest <manifest_path> <out_file> <peer> [strategy=random] [secure=0]
+说明：持续下载完整文件（清单驱动）
+示例：download_manifest data/manifest.txt data/output.bin 127.0.0.1:9001 round_robin 1
+
+三、协议概览（论文写作推荐）
+本项目的 TCP 文本协议以“一次请求 -> 一次响应”为基本交互单元，常见消息包括：
+1) 节点握手
+- NODE_HELLO -> NODE_WELCOME
+2) DHT 路由与键查询（MVP6）
+- FIND_NODE <target_key>
+  <- FIND_NODE_RESP <addr_csv>
+- FIND_VALUE <key>
+  <- FIND_VALUE_RESP <owners_csv>   （若命中）
+  <- FIND_NODE_RESP <addr_csv>      （若未命中，返回更近节点）
+- STORE <key> <owners_csv>
+  <- STORE_OK / STORE_ERROR
+3) 传统查找回退（兼容）
+- FIND_CHUNK <chunk_id>
+  <- FIND_RESP <owners_csv>
+4) 分片获取
+- GET_CHUNK <chunk_id>
+  <- CHUNK_DATA <plaintext...>
+5) 安全分片获取（MVP4）
+- GET_CHUNK_SEC <chunk_id>
+  <- CHUNK_SEC <secure_text...>
+6) 副本分发（MVP5）
+- PUT_CHUNK_HEX  <chunk_id> <hex_payload>
+  <- PUT_OK / PUT_ERROR
+- PUT_CHUNK_HEX2 <chunk_id> <owners_csv> <hex_payload>
+  <- PUT_OK / PUT_ERROR
+
+说明：
+- owners_csv/addr_csv 均为逗号分隔的 host:port 列表
+- 真实下载流程优先走 FIND_VALUE（迭代查找），找不到再回退 FIND_CHUNK
+
+三、配置文件说明（configs/app.yaml）
+node_id
+说明：节点唯一标识
+示例：node-001
+
+listen_port
+说明：节点监听端口
+示例：9000
+
+dht_k
+说明：DHT 路由表 k-bucket 参数（MVP 仅占位）
+示例：8
+
+max_nodes
+说明：允许的最大节点规模（MVP 仅占位）
+示例：50
+
+seed_nodes
+说明：静态种子节点列表（逗号分隔 host:port）
+示例：127.0.0.1:9001,127.0.0.1:9002
+
+self_addr
+说明：节点对外地址（用于 FIND_CHUNK 返回）
+示例：127.0.0.1:9000
+
+routing_capacity
+说明：路由表容量上限（简化 k-bucket 容量）
+示例：8
+
+chunk_size_mb
+说明：分片大小（MB）
+示例：1
+
+chunks_dir
+说明：分片输出目录
+示例：data/chunks
+
+chunk_index_file
+说明：分片索引文件（制表符分隔）
+格式：chunk_id<TAB>path<TAB>size<TAB>owners(可选，逗号分隔)<TAB>source(可选)
+示例：data/chunk_index.tsv
+
+aes_key_hex
+说明：AES-128 密钥（16 字节十六进制字符串）
+示例：00112233445566778899aabbccddeeff
+
+hmac_key_hex
+说明：HMAC 密钥（16 字节十六进制字符串）
+示例：0102030405060708090a0b0c0d0e0f10
+
+download_strategy
+说明：下载策略（random/round_robin）
+示例：random
+
+download_stats_file
+说明：下载统计持久化文件（用于成功率/延迟打分）
+示例：data/download_stats.tsv
+
+upload_meta_file
+说明：上传文件元数据持久化文件
+示例：data/upload_meta.tsv
+
+upload_replica_file
+说明：上传分片副本分发结果持久化文件
+示例：data/upload_replica.tsv
+
+http_port
+说明：HTTP API 默认端口（--mode http 可用 --http_port 覆盖）
+示例：8080
+
+log_level
+说明：日志级别（debug/info/warn/error）
+示例：info
+
+log_file
+说明：日志文件路径
+示例：logs/app.log
+
+四、用户如何与项目交互（MVP0）
+当前版本不提供图形界面或 Web 界面，主要通过命令行运行：
+1) 修改配置文件 -> 启动程序
+2) 观察日志输出，确认参数是否生效
+
+五、后续交互扩展（规划）
+1) 增加命令行子命令：
+   - split <file>    分片
+   - get <chunk_id>  拉取分片
+2) 增加管理接口（HTTP/CLI）查看节点状态与日志
+
+五、常见问题（Troubleshooting）
+1) 端口冲突 / Address already in use
+- 表现：server 日志出现 bind failed，或脚本等待 server ready 超时
+- 处理：查占用端口并 kill 对应进程（macOS: lsof -iTCP:<port> -sTCP:LISTEN）
+2) Connection refused
+- 含义：客户端尝试连接某个 host:port，但该端口暂无服务监听
+- 在部分脚本的“预处理阶段”（先切分再启动 server）可能出现；不一定是业务失败
+3) 脚本误报失败（日志断言过时）
+- 若业务实际完成但脚本在最后 awk 校验失败，优先核对日志关键字与当前代码输出是否一致
+
+六、推荐脚本与复现实验（建议论文用）
+1) 全功能端到端（独立脚本，不依赖其他脚本）
+- scripts/run_full_feature_e2e.sh
+  覆盖：构建+单测、6 节点、上传+多副本、DHT 下载（明文/加密）、manifest 整文件下载、stats、HTTP 启动
+2) 6 节点集成测试（上传/副本/DHT/manifest）
+- scripts/run_6node_integration_test.sh
+3) 8 节点大文件（>=100MB）明文/加密下载
+- scripts/run_mvp4_8node_bigfile_test.sh
+4) 统计查询验证
+- scripts/run_stats_query_test.sh
+
+七、自动化脚本（历史 MVP 路径）
+（用于分阶段讲解与回归验证，适合论文“演进过程”章节）
+1) MVP2 网络验证
+脚本路径：scripts/run_mvp2_network_demo.sh
+脚本功能：
+1) 编译项目
+2) 生成测试输入文件（MVP2 专用）
+3) 本地分片并生成索引
+4) 启动 server，并由 client 请求分片
+
+脚本内容：
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PRO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${PRO_DIR}"
+
+cmake -S . -B build
+cmake --build build
+
+mkdir -p data
+printf "mvp2 network demo file\nline2\nline3\n" > data/mvp2_net_input.txt
+
+./build/app --config configs/app.yaml --input data/mvp2_net_input.txt
+
+CHUNK_ID="$(awk 'NR==1 {print $1}' data/chunk_index.tsv)"
+./build/app --config configs/app.yaml --mode server > logs/mvp2_server.log 2>&1 &
+SERVER_PID=$!
+sleep 1
+./build/app --config configs/app.yaml --mode client --peer 127.0.0.1:9000 --chunk_id "${CHUNK_ID}"
+kill "${SERVER_PID}" || true
+wait "${SERVER_PID}" 2>/dev/null || true
+
+2) MVP3 三节点发现与下载
+脚本路径：scripts/run_mvp3_find_chunk_demo.sh
+脚本功能：
+1) 构建项目
+2) 节点 B/C 生成分片与索引
+3) 启动 B/C server
+4) 节点 A 查询 FIND_CHUNK 并下载校验
+
+脚本内容：
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PRO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${PRO_DIR}"
+
+cmake -S . -B build
+cmake --build build
+
+mkdir -p data/mvp3
+printf "mvp3 find_chunk demo file\nline2\nline3\n" > data/mvp3/input.txt
+
+mkdir -p data/mvp3/configs
+cat > data/mvp3/configs/node_a.yaml <<'EOF'
+node_id: "node-a"
+listen_port: 9001
+seed_nodes: "127.0.0.1:9002,127.0.0.1:9003"
+self_addr: "127.0.0.1:9001"
+chunks_dir: "data/mvp3/node_a/chunks"
+chunk_index_file: "data/mvp3/node_a/chunk_index.tsv"
+log_file: "logs/mvp3_node_a.log"
+EOF
+
+cat > data/mvp3/configs/node_b.yaml <<'EOF'
+node_id: "node-b"
+listen_port: 9002
+seed_nodes: "127.0.0.1:9001,127.0.0.1:9003"
+self_addr: "127.0.0.1:9002"
+chunks_dir: "data/mvp3/node_b/chunks"
+chunk_index_file: "data/mvp3/node_b/chunk_index.tsv"
+log_file: "logs/mvp3_node_b.log"
+EOF
+
+cat > data/mvp3/configs/node_c.yaml <<'EOF'
+node_id: "node-c"
+listen_port: 9003
+seed_nodes: "127.0.0.1:9001,127.0.0.1:9002"
+self_addr: "127.0.0.1:9003"
+chunks_dir: "data/mvp3/node_c/chunks"
+chunk_index_file: "data/mvp3/node_c/chunk_index.tsv"
+log_file: "logs/mvp3_node_c.log"
+EOF
+
+./build/app --config data/mvp3/configs/node_b.yaml --input data/mvp3/input.txt
+./build/app --config data/mvp3/configs/node_c.yaml --input data/mvp3/input.txt
+
+CHUNK_ID="$(awk 'NR==1 {print $1}' data/mvp3/node_b/chunk_index.tsv)"
+./build/app --config data/mvp3/configs/node_b.yaml --mode server > logs/mvp3_node_b_server.log 2>&1 &
+PID_B=$!
+./build/app --config data/mvp3/configs/node_c.yaml --mode server > logs/mvp3_node_c_server.log 2>&1 &
+PID_C=$!
+sleep 1
+
+./build/app --config data/mvp3/configs/node_a.yaml --mode client --peer 127.0.0.1:9002 --chunk_id "${CHUNK_ID}"
+
+kill "${PID_B}" || true
+kill "${PID_C}" || true
+wait "${PID_B}" 2>/dev/null || true
+wait "${PID_C}" 2>/dev/null || true
+
+3) MVP4 双节点加密传输
+脚本路径：scripts/run_mvp4_secure_demo.sh
+脚本功能：
+1) 构建项目
+2) 节点 B 生成分片与索引
+3) 启动 B server（加密响应）
+4) 节点 A 以加密模式下载并校验
+
+脚本内容：
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PRO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${PRO_DIR}"
+
+cmake -S . -B build
+cmake --build build
+
+mkdir -p data/mvp4
+printf "mvp4 secure demo file\nline2\nline3\n" > data/mvp4/input.txt
+
+mkdir -p data/mvp4/configs
+cat > data/mvp4/configs/node_a.yaml <<'EOF'
+node_id: "node-a"
+listen_port: 9101
+seed_nodes: "127.0.0.1:9102"
+self_addr: "127.0.0.1:9101"
+chunks_dir: "data/mvp4/node_a/chunks"
+chunk_index_file: "data/mvp4/node_a/chunk_index.tsv"
+aes_key_hex: "00112233445566778899aabbccddeeff"
+hmac_key_hex: "0102030405060708090a0b0c0d0e0f10"
+log_file: "logs/mvp4_node_a.log"
+EOF
+
+cat > data/mvp4/configs/node_b.yaml <<'EOF'
+node_id: "node-b"
+listen_port: 9102
+seed_nodes: "127.0.0.1:9101"
+self_addr: "127.0.0.1:9102"
+chunks_dir: "data/mvp4/node_b/chunks"
+chunk_index_file: "data/mvp4/node_b/chunk_index.tsv"
+aes_key_hex: "00112233445566778899aabbccddeeff"
+hmac_key_hex: "0102030405060708090a0b0c0d0e0f10"
+log_file: "logs/mvp4_node_b.log"
+EOF
+
+./build/app --config data/mvp4/configs/node_b.yaml --input data/mvp4/input.txt
+
+CHUNK_ID="$(awk 'NR==1 {print $1}' data/mvp4/node_b/chunk_index.tsv)"
+./build/app --config data/mvp4/configs/node_b.yaml --mode server > logs/mvp4_node_b_server.log 2>&1 &
+PID_B=$!
+sleep 1
+
+./build/app --config data/mvp4/configs/node_a.yaml --mode client --peer 127.0.0.1:9102 --chunk_id "${CHUNK_ID}" --secure
+
+kill "${PID_B}" || true
+wait "${PID_B}" 2>/dev/null || true
+
+4) MVP4 三节点功能测试
+脚本路径：scripts/run_mvp4_3node_test.sh
+脚本功能：
+1) 构建项目
+2) 节点 B/C 分片落盘并生成索引
+3) 启动 B/C server
+4) 节点 A 普通模式下载校验
+5) 节点 A 加密模式下载校验
+6) 资源检查（单节点 RSS < 200MB）
+
+脚本内容：
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PRO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${PRO_DIR}"
+
+cmake -S . -B build
+cmake --build build
+
+mkdir -p data/mvp4_3n
+printf "mvp4 3-node demo file\nline2\nline3\n" > data/mvp4_3n/input.txt
+
+mkdir -p data/mvp4_3n/configs
+cat > data/mvp4_3n/configs/node_a.yaml <<'EOF'
+node_id: "node-a"
+listen_port: 9201
+seed_nodes: "127.0.0.1:9202,127.0.0.1:9203"
+self_addr: "127.0.0.1:9201"
+chunks_dir: "data/mvp4_3n/node_a/chunks"
+chunk_index_file: "data/mvp4_3n/node_a/chunk_index.tsv"
+aes_key_hex: "00112233445566778899aabbccddeeff"
+hmac_key_hex: "0102030405060708090a0b0c0d0e0f10"
+log_file: "logs/mvp4_3n_node_a.log"
+EOF
+
+cat > data/mvp4_3n/configs/node_b.yaml <<'EOF'
+node_id: "node-b"
+listen_port: 9202
+seed_nodes: "127.0.0.1:9201,127.0.0.1:9203"
+self_addr: "127.0.0.1:9202"
+chunks_dir: "data/mvp4_3n/node_b/chunks"
+chunk_index_file: "data/mvp4_3n/node_b/chunk_index.tsv"
+aes_key_hex: "00112233445566778899aabbccddeeff"
+hmac_key_hex: "0102030405060708090a0b0c0d0e0f10"
+log_file: "logs/mvp4_3n_node_b.log"
+EOF
+
+cat > data/mvp4_3n/configs/node_c.yaml <<'EOF'
+node_id: "node-c"
+listen_port: 9203
+seed_nodes: "127.0.0.1:9201,127.0.0.1:9202"
+self_addr: "127.0.0.1:9203"
+chunks_dir: "data/mvp4_3n/node_c/chunks"
+chunk_index_file: "data/mvp4_3n/node_c/chunk_index.tsv"
+aes_key_hex: "00112233445566778899aabbccddeeff"
+hmac_key_hex: "0102030405060708090a0b0c0d0e0f10"
+log_file: "logs/mvp4_3n_node_c.log"
+EOF
+
+./build/app --config data/mvp4_3n/configs/node_b.yaml --input data/mvp4_3n/input.txt
+./build/app --config data/mvp4_3n/configs/node_c.yaml --input data/mvp4_3n/input.txt
+
+CHUNK_ID="$(awk 'NR==1 {print $1}' data/mvp4_3n/node_b/chunk_index.tsv)"
+./build/app --config data/mvp4_3n/configs/node_b.yaml --mode server > logs/mvp4_3n_node_b_server.log 2>&1 &
+PID_B=$!
+./build/app --config data/mvp4_3n/configs/node_c.yaml --mode server > logs/mvp4_3n_node_c_server.log 2>&1 &
+PID_C=$!
+sleep 1
+
+MAX_RSS_KB=200000
+RSS_B_KB="$(ps -o rss= -p "${PID_B}" 2>/dev/null | tr -d ' ')"
+RSS_C_KB="$(ps -o rss= -p "${PID_C}" 2>/dev/null | tr -d ' ')"
+if [[ -z "${RSS_B_KB}" || -z "${RSS_C_KB}" ]]; then
+  echo "[test] rss check skipped (ps not permitted)"
+fi
+if [[ -n "${RSS_B_KB}" && "${RSS_B_KB}" -gt "${MAX_RSS_KB}" ]]; then
+  exit 1
+fi
+if [[ -n "${RSS_C_KB}" && "${RSS_C_KB}" -gt "${MAX_RSS_KB}" ]]; then
+  exit 1
+fi
+
+./build/app --config data/mvp4_3n/configs/node_a.yaml --mode client \
+  --peer 127.0.0.1:9202 --chunk_id "${CHUNK_ID}" \
+  > logs/mvp4_3n_client_plain.log 2>&1
+
+./build/app --config data/mvp4_3n/configs/node_a.yaml --mode client \
+  --peer 127.0.0.1:9202 --chunk_id "${CHUNK_ID}" --secure \
+  > logs/mvp4_3n_client_secure.log 2>&1
+
+awk '/mvp3: download ok/ {found=1} END {exit !found}' logs/mvp4_3n_client_plain.log
+awk '/mvp4: secure download ok/ {found=1} END {exit !found}' logs/mvp4_3n_client_secure.log
+
+kill "${PID_B}" || true
+kill "${PID_C}" || true
+wait "${PID_B}" 2>/dev/null || true
+wait "${PID_C}" 2>/dev/null || true
+
+5) MVP4 三节点大文件测试
+脚本路径：scripts/run_mvp4_3node_bigfile_test.sh
+
+八、常用启动参数组合示例（可直接复制运行）
+说明：以下示例均以 `pro/` 目录为工作目录（即在 `毕业设计正式项目/pro` 下执行）。
+
+【示例 1】仅做本地分片与生成索引（不启动网络）
+命令：
+./build/app --config configs/app.yaml --input data/sample.txt
+含义：
+- 读取配置 `configs/app.yaml`
+- 对 `data/sample.txt` 做分片（chunk_size_mb 控制大小）、计算 chunk_id、落盘到 chunks_dir
+- 生成/覆盖 chunk_index_file（TSV 索引）
+适用：验证分片/哈希/索引持久化是否正常（论文中可作为数据层基线）。
+
+【示例 2】启动一个节点的 TCP 服务端（等待请求）
+命令：
+./build/app --config configs/app.yaml --mode server
+含义：
+- 当前节点在 listen_port 上监听
+- 处理 NODE_HELLO / FIND_* / GET_CHUNK* / PUT_* / STORE 等请求
+适用：作为“提供分片的节点”或“DHT 节点”运行。
+
+【示例 3】客户端按 chunk_id 下载（明文）
+命令：
+./build/app --config configs/app.yaml --mode client --peer 127.0.0.1:9000 --chunk_id <CHUNK_ID>
+含义：
+- 以 client 模式运行，入口 peer 为 127.0.0.1:9000
+- 优先通过 DHT 的 FIND_VALUE（迭代查找）获取 owners
+- 若 DHT 未命中则回退 FIND_CHUNK
+- 对 owners 按 strategy 选择并 GET_CHUNK 下载
+适用：验证查找 + 下载链路（明文）。
+
+【示例 4】客户端按 chunk_id 下载（加密传输）
+命令：
+./build/app --config configs/app.yaml --mode client --peer 127.0.0.1:9000 --chunk_id <CHUNK_ID> --secure --strategy round_robin
+含义：
+- 在示例 3 基础上开启 `--secure`
+- GET_CHUNK_SEC 返回加密封装（AES-128-CBC + HMAC），客户端解密并校验完整性
+- 指定 round_robin 下载策略
+适用：论文“安全传输”章节的端到端证明。
+
+【示例 5】上传 + 多副本分发 + 生成 manifest（用于整文件下载）
+命令：
+./build/app --config configs/app.yaml --upload data/sample.txt --replica 3 --manifest_out data/manifest.txt
+含义：
+- 将 sample.txt 本地切分并生成索引
+- 将分片通过 PUT_* 分发到 seed_nodes 中的若干 peer（replica=3）
+- 输出 manifest（每行一个 chunk_id，保持顺序）
+适用：验证“多副本上传”与“manifest 驱动整文件下载”的前置步骤。
+
+【示例 6】按 manifest 下载整文件并落盘（自动组装）
+命令：
+./build/app --config configs/app.yaml --mode client --peer 127.0.0.1:9000 --manifest data/manifest.txt --out_file data/output.bin --strategy round_robin
+含义：
+- 读取 manifest 的 chunk_id 顺序列表
+- 对每个 chunk_id 迭代 FIND_VALUE（必要时回退 FIND_CHUNK），下载后按顺序写入 out_file
+- 成功会输出 `mvp5: file assembled: data/output.bin`
+适用：论文“端到端流程”展示（上传->manifest->整文件下载）。
+
+【示例 7】统计查询：下载统计（JSON，限制条数）
+命令：
+./build/app --config configs/app.yaml --mode stats --stats_type download --json --limit 20
+含义：
+- 读取 download_stats_file（TSV）并输出 JSON
+- limit 控制输出 item 数量
+适用：论文“实验统计/性能评估”与后续 ML（热度预测/调度）数据来源。
+
+【示例 8】统计查询：上传元信息 / 副本分发结果
+命令：
+./build/app --config configs/app.yaml --mode stats --stats_type upload_meta --json --limit 10
+./build/app --config configs/app.yaml --mode stats --stats_type upload_replica --json --limit 50
+含义：
+- upload_meta：记录“上传文件 -> manifest”的元数据
+- upload_replica：记录每个 chunk 分发到各 peer 的成功/失败
+适用：论文“可观测性与数据闭环”部分。
+
+【示例 9】启动 HTTP API（供前端调用）
+命令：
+./build/app --config configs/app.yaml --mode http --http_port 8080
+含义：
+- 启动 HTTP 服务监听（默认用配置 http_port，可用 --http_port 覆盖）
+- 提供最小 API，用于前端集成/演示
+适用：论文答辩演示（前后端联动）。
+
+【示例 10】一键跑通“全功能端到端”（推荐论文复现实验）
+命令：
+bash scripts/run_full_feature_e2e.sh
+含义：
+- 自动构建与单测
+- 自动生成多节点配置并启动 6 节点
+- 上传+多副本、DHT 查找下载（明文/加密）、manifest 整文件下载、stats、HTTP 启动检查
+适用：论文实验复现与“系统整体正确性”证明。
+脚本功能：
+1) 构建项目
+2) 生成 120MB 测试文件
+3) 节点 B/C 分片落盘并生成索引
+4) 启动 B/C server
+5) 节点 A 普通模式下载校验
+6) 节点 A 加密模式下载校验
+
+脚本内容：
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PRO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${PRO_DIR}"
+
+cmake -S . -B build
+cmake --build build
+
+mkdir -p data/mvp4_3n_big
+BIG_FILE="data/mvp4_3n_big/input_120mb.bin"
+dd if=/dev/zero of="${BIG_FILE}" bs=1m count=120 status=none
+
+mkdir -p data/mvp4_3n_big/configs
+cat > data/mvp4_3n_big/configs/node_a.yaml <<'EOF'
+node_id: "node-a"
+listen_port: 9301
+seed_nodes: "127.0.0.1:9302,127.0.0.1:9303"
+self_addr: "127.0.0.1:9301"
+chunks_dir: "data/mvp4_3n_big/node_a/chunks"
+chunk_index_file: "data/mvp4_3n_big/node_a/chunk_index.tsv"
+aes_key_hex: "00112233445566778899aabbccddeeff"
+hmac_key_hex: "0102030405060708090a0b0c0d0e0f10"
+log_file: "logs/mvp4_3n_big_node_a.log"
+EOF
+
+cat > data/mvp4_3n_big/configs/node_b.yaml <<'EOF'
+node_id: "node-b"
+listen_port: 9302
+seed_nodes: "127.0.0.1:9301,127.0.0.1:9303"
+self_addr: "127.0.0.1:9302"
+chunks_dir: "data/mvp4_3n_big/node_b/chunks"
+chunk_index_file: "data/mvp4_3n_big/node_b/chunk_index.tsv"
+aes_key_hex: "00112233445566778899aabbccddeeff"
+hmac_key_hex: "0102030405060708090a0b0c0d0e0f10"
+log_file: "logs/mvp4_3n_big_node_b.log"
+EOF
+
+cat > data/mvp4_3n_big/configs/node_c.yaml <<'EOF'
+node_id: "node-c"
+listen_port: 9303
+seed_nodes: "127.0.0.1:9301,127.0.0.1:9302"
+self_addr: "127.0.0.1:9303"
+chunks_dir: "data/mvp4_3n_big/node_c/chunks"
+chunk_index_file: "data/mvp4_3n_big/node_c/chunk_index.tsv"
+aes_key_hex: "00112233445566778899aabbccddeeff"
+hmac_key_hex: "0102030405060708090a0b0c0d0e0f10"
+log_file: "logs/mvp4_3n_big_node_c.log"
+EOF
+
+./build/app --config data/mvp4_3n_big/configs/node_b.yaml --input "${BIG_FILE}"
+./build/app --config data/mvp4_3n_big/configs/node_c.yaml --input "${BIG_FILE}"
+
+CHUNK_ID="$(awk 'NR==1 {print $1}' data/mvp4_3n_big/node_b/chunk_index.tsv)"
+./build/app --config data/mvp4_3n_big/configs/node_b.yaml --mode server > logs/mvp4_3n_big_node_b_server.log 2>&1 &
+PID_B=$!
+./build/app --config data/mvp4_3n_big/configs/node_c.yaml --mode server > logs/mvp4_3n_big_node_c_server.log 2>&1 &
+PID_C=$!
+sleep 1
+
+wait_for_server() {
+  local log_file="$1"
+  local max_wait=60
+  local waited=0
+  while [[ "${waited}" -lt "${max_wait}" ]]; do
+    if awk '/tcp server waiting for client/ {found=1} END {exit !found}' "${log_file}" 2>/dev/null; then
+      return 0
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+  return 1
+}
+
+wait_for_server logs/mvp4_3n_big_node_b_server.log
+wait_for_server logs/mvp4_3n_big_node_c_server.log
+
+./build/app --config data/mvp4_3n_big/configs/node_a.yaml --mode client \
+  --peer 127.0.0.1:9302 --chunk_id "${CHUNK_ID}" \
+  > logs/mvp4_3n_big_client_plain.log 2>&1
+
+./build/app --config data/mvp4_3n_big/configs/node_a.yaml --mode client \
+  --peer 127.0.0.1:9302 --chunk_id "${CHUNK_ID}" --secure \
+  > logs/mvp4_3n_big_client_secure.log 2>&1
+
+awk '/mvp3: download ok/ {found=1} END {exit !found}' logs/mvp4_3n_big_client_plain.log
+awk '/mvp4: secure download ok/ {found=1} END {exit !found}' logs/mvp4_3n_big_client_secure.log
